@@ -1,5 +1,6 @@
 import json
 
+
 class ParamManager:
 
     def __init__(self, config_path):
@@ -7,15 +8,15 @@ class ParamManager:
         self.param_dict = json.load(f)
 
         try:
-            self.tft_params = self.param_dict['TFTparams'][0]
+            self.tft_params = self.param_dict['TFTparams']
         except:
-            raise ValueError('There is no TFT params key in the config file')
+            raise ValueError('There are no TFT params key in the config file')
 
         if self.tft_params:
-            self.attn_params = self.tft_params['attn'][0]
-            self.optimizer_params = self.tft_params['optimizer'][0]
-            self.col_mappings = self.tft_params['col_mappings'][0]
-            self.data_params = self.tft_params['data'][0]
+            self.attn_params = self.tft_params['attn']
+            self.optimizer_params = self.tft_params['optimizer']
+            self.col_mappings = self.tft_params['col_mappings']
+            self.data_params = self.tft_params['data']['params']
 
     def print_params(self):
 
@@ -26,3 +27,4 @@ class ParamManager:
         print('\nTFT Attention Parameters')
         for i in self.attn_params:
             print(i + ': ' + str(self.attn_params[i]))
+

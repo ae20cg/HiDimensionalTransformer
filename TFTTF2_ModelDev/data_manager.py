@@ -2,12 +2,15 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
+
 class DataManager:
 
-    def __init__(self, data_path,total_seq_len, col_mappings, data_params):
+    def __init__(self, data_path, total_seq_len, col_mappings, data_params):
 
         self.training = pd.read_csv(data_path)
-        if self.training.isna().any():
+        # Temporary overwrite
+        self.training = self.training.dropna()
+        if self.training.isna().sum().any():
             raise ValueError('Null values found in your training dataset')
 
         self.tseq_len = total_seq_len
@@ -17,13 +20,15 @@ class DataManager:
         self.buffer_size = data_params['buffer_size']
 
         self.num_samples = None
+        self.inference_data = None
+        self.training_data = None
 
     def batch_data(self, data):
 
         if self.training is None:
             return None
 
-        def _batch_single_entity(input_data,tseq):
+        def _batch_single_entity(input_data, tseq):
             time_steps = len(input_data)
             lags = tseq
             x = input_data.values
@@ -67,20 +72,18 @@ class DataManager:
 
         batched_data = self.batch_data(self.training)
 
-        #TODO fix this line below
+        # TODO fix this line below
         self.num_samples = batched_data['Future'].shape[0]
 
-        all_inputs = np.concatenate((batched_data['Known Regular'], batched_data['Future'], batched_data['TargetAsInput']),axis=2)
+        all_inputs = np.concatenate(
+            (batched_data['Known Regular'], batched_data['Future'], batched_data['TargetAsInput']), axis=2)
         tf_data = tf.data.Dataset.from_tensor_slices((all_inputs, batched_data['Target']))
 
         def make_inference_batches(ds):
-
-            return (ds.cache().batch(self.batch_size))
+            return ds.cache().batch(self.batch_size)
 
         def make_train_batches(ds):
-
-            return (ds.cache().shuffle(self.buffer_size).batch(self.batch_size))
+            return ds.cache().shuffle(self.buffer_size).batch(self.batch_size)
 
         self.inference_data = make_inference_batches(tf_data)
         self.training_data = make_train_batches(tf_data)
-

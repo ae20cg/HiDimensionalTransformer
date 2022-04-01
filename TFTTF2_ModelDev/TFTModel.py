@@ -126,11 +126,11 @@ class HiD_EmbeddingLayer(tf.keras.layers.Layer):
                                        for i in range(len(target_loc))]
 
     def call(self, known_inputs, unknown_inputs, static_inputs):
-        '''
+        """
         Not set up for categorical inputs currently - therefore regular inputs = inputs
 
         First trial we will ignore the targets
-        '''
+        """
 
         static_inputs = tf.stack([self.sd[sdx](s) for sdx, s in enumerate(static_inputs)], axis=1)
 
@@ -513,7 +513,7 @@ class TemporalFusionTransformer(tf.keras.Model):
                                                          use_time_distributed=True,
                                                          return_gate=True)
 
-        self.mlha = InterpretableMultiHeadAttention(n_head=self.num_heads, dmodel=self.attn_hls, dropout=self.dropout_rate)
+        self.mlha = InterpretableMultiHeadAttention(n_head=self.num_heads, d_model=self.attn_hls, dropout=self.dropout_rate)
 
         self.static_grn1 = GatedResidualNetwork(self.hls,
                                                 dropout_rate=self.dropout_rate,

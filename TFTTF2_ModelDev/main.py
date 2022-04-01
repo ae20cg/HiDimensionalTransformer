@@ -15,13 +15,14 @@ from data_manager import DataManager
 
 
 def main():
+
     parser = argparse.ArgumentParser(description='Run TFT', formatter_class=argparse.RawTextHelpFormatter)
 
-    parser.add_argument('p', '--configPath',
+    parser.add_argument('-p', '--configPath',
                         help='Path the the .config file to read in paremeters for TFT', type=str, default=None)
-    parser.add_argument('c', '--checkpointPath',
-                        help='Path to store model checkpoints and weights', type=str,default=None)
-    parser.add_argument('d', '--dataPath',
+    parser.add_argument('-c', '--checkpointPath',
+                        help='Path to store model checkpoints and weights', type=str, default=None)
+    parser.add_argument('-d', '--dataPath',
                         help='Path to TFT Data csv', type=str, default=None)
 
     args = parser.parse_args()
@@ -45,22 +46,27 @@ def main():
     unk_inputs = tft_params['total_inputs'] - len(tft_params['static_locs']) - len(tft_params['future_locs'])
 
     transformer = TemporalFusionTransformer(input_seq_len=tft_params['input_sequence_length'],
-                                      target_seq_len=['target_sequence_length'], output_size=tft_params['output_size'],
-                                      static_inputs=tft_params['static_locs'], target_inputs=tft_params['target_loc'],
-                                      future_inputs=tft_params['future_locs'],
-                                      known_reg_inputs=tft_params['static_locs'] + tft_params['future_locs'],
-                                      attn_hls=attn_params['hidden_layer_size'], num_heads=attn_params['num_heads'],
-                                      final_mlp_hls=tft_params['final_mlp_hidden_layer'], unknown_inputs=unk_inputs,
-                                      cat_inputs=None, rate=tft_params['dropout_rate'])
+                                            target_seq_len=tft_params['target_sequence_length'],
+                                            output_size=tft_params['output_size'],
+                                            static_inputs=tft_params['static_locs'],
+                                            target_inputs=tft_params['target_loc'],
+                                            future_inputs=tft_params['future_locs'],
+                                            known_reg_inputs=tft_params['static_locs'] + tft_params['future_locs'],
+                                            attn_hls=attn_params['hidden_layer_size'],
+                                            num_heads=attn_params['num_heads'],
+                                            final_mlp_hls=tft_params['final_mlp_hidden_layer'],
+                                            unknown_inputs=unk_inputs,
+                                            cat_inputs=None, rate=tft_params['dropout_rate'])
 
     train_loss = tf.keras.metrics.Mean(name='train_loss')
-    if tft_params['loss'] == 'MSE':
+
+    if tft_params['loss'].upper() == 'MSE':
         loss_object = tf.keras.losses.MeanSquaredError()
     else:
         print('No other losses defined in main method')
 
-    if optimizer_params['optimizer'] == 'adam':
-        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001, clipnorm=0.01)
+    if optimizer_params['optimizer'].lower() == 'adam':
+        optimizer = tf.keras.optimizers.Adam(learning_rate=optimizer_params['learning_rate'], clipnorm=optimizer_params['clipnorm'])
     else:
         print('No other optimizers defined in main method')
 
@@ -90,8 +96,7 @@ def main():
     @tf.function
     def train_step(inp, tar):
         with tf.GradientTape() as tape:
-            predictions, _ = transformer([inp, tar],
-                                         training=True)
+            predictions, _ = transformer([inp, tar], training=True)
 
             loss = loss_object(tar, predictions)
 
@@ -100,12 +105,9 @@ def main():
 
         train_loss(loss)
 
-
-
     for epoch in range(EPOCHS):
         start = time.time()
         train_loss.reset_states()
-        # train_accuracy.reset_states()
 
         pb_i = Progbar(num_training_samples, stateful_metrics=metrics_names)
         p_counter = 0
@@ -117,13 +119,13 @@ def main():
 
         if batch % 50 == 0:
             print(
-                f'\nEpoch {epoch + 1} Batch {batch} Loss {train_loss.result():.4f} Accuracy {train_accuracy.result():.4f}')
+                f'\nEpoch {epoch + 1} Batch {batch} Loss {train_loss.result():.4f}')
 
         if (epoch + 1) % 5 == 0:
             ckpt_save_path = ckpt_manager.save()
             print(f'\nSaving checkpoint for epoch {epoch + 1} at {ckpt_save_path}')
 
-        print(f'\nEpoch {epoch + 1} Loss {train_loss.result():.4f} Accuracy {train_accuracy.result():.4f}')
+        print(f'\nEpoch {epoch + 1} Loss {train_loss.result():.4f}')
 
         print(f'Time taken for 1 epoch: {time.time() - start:.2f} secs\n')
 
